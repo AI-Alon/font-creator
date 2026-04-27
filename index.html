@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FontCraft — Font Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/opentype.js/dist/opentype.min.js"></script>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<header class="toolbar">
+  <div class="toolbar-left">
+    <a href="landing.html" class="btn-home" title="Back to home">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <span class="logo">FontCraft</span>
+  </div>
+  <div class="toolbar-center">
+    <button id="btn-undo" class="btn btn-ghost" title="Undo (Ctrl+Z)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+      Undo
+    </button>
+    <button id="btn-redo" class="btn btn-ghost" title="Redo (Ctrl+Shift+Z)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+      Redo
+    </button>
+    <div class="toolbar-sep"></div>
+    <button id="btn-pencil" class="btn btn-tool active" data-tool="pencil" title="Pencil">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      Draw
+    </button>
+    <button id="btn-eraser" class="btn btn-tool" data-tool="eraser" title="Eraser">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 20H7L3 16l13-13 7 7-1 1"/><path d="M6 17 9.5 13.5"/></svg>
+      Erase
+    </button>
+    <button id="btn-bucket" class="btn btn-tool" data-tool="bucket" title="Bucket fill — click to flood-fill a region">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 11V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v7"/><path d="M3 15h10"/><path d="M19 15a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/><line x1="19" y1="15" x2="19" y2="11"/></svg>
+      Fill
+    </button>
+    <button id="btn-clear" class="btn btn-ghost">Clear Glyph</button>
+    <div class="toolbar-sep"></div>
+    <label class="zoom-label">
+      Zoom
+      <input type="range" id="zoom-slider" min="1" max="3" step="0.1" value="1" />
+      <span id="zoom-value">1×</span>
+    </label>
+  </div>
+  <div class="toolbar-right">
+    <button id="btn-popular" class="btn btn-ghost">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Popular Fonts
+    </button>
+    <button id="btn-import" class="btn btn-ghost">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Import File
+    </button>
+    <button id="btn-export-svg" class="btn btn-ghost">Export SVG</button>
+    <button id="btn-export-otf" class="btn btn-accent">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download .otf
+    </button>
+    <button id="btn-clear-all" class="btn btn-danger">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      Clear Font
+    </button>
+  </div>
+</header>
+
+<input type="file" id="file-input" accept=".ttf,.otf" style="display:none" />
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-card">
+    <div class="spinner"></div>
+    <p id="loading-msg">Importing font…</p>
+  </div>
+</div>
+
+<!-- POPULAR FONTS MODAL -->
+<div id="font-modal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div>
+        <h3 class="modal-title">Popular Fonts</h3>
+        <p class="modal-subtitle">Click a font to import all 86 glyphs — then edit any character.</p>
+      </div>
+      <button id="modal-close" class="modal-close-btn" title="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-search-row">
+      <div class="modal-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="font-search" class="modal-search" placeholder="Search fonts…" autocomplete="off" />
+      </div>
+      <div class="modal-tabs" id="modal-tabs">
+        <button class="modal-tab active" data-cat="All">All</button>
+        <button class="modal-tab" data-cat="System">System</button>
+        <button class="modal-tab" data-cat="Sans">Sans</button>
+        <button class="modal-tab" data-cat="Serif">Serif</button>
+        <button class="modal-tab" data-cat="Display">Display</button>
+        <button class="modal-tab" data-cat="Mono">Mono</button>
+      </div>
+    </div>
+
+    <div id="font-modal-grid" class="font-modal-grid"></div>
+
+    <div class="modal-foot">
+      <span id="modal-selected-label" class="modal-selected-label">No font selected</span>
+      <div style="display:flex;gap:10px">
+        <button id="btn-modal-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="btn-modal-import" class="btn btn-accent" disabled>Import Font</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<main class="layout">
+
+  <!-- LEFT: CHARACTER SELECTOR -->
+  <aside class="char-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Characters</span>
+      <span id="glyph-count" class="glyph-count">0 drawn</span>
+    </div>
+    <div id="char-grid" class="char-grid"></div>
+  </aside>
+
+  <!-- CENTER: CANVAS -->
+  <section class="canvas-section">
+    <div class="canvas-info">
+      <span id="current-char-label" class="current-char-label">A</span>
+      <span class="canvas-hint">Draw cells to build your glyph</span>
+    </div>
+    <div class="canvas-outer">
+      <div class="canvas-wrapper" id="canvas-wrapper">
+        <canvas id="main-canvas" width="500" height="500"></canvas>
+      </div>
+    </div>
+    <div class="canvas-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span>Baseline (row 38)</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ef4444"></span>Cap height (row 8)</span>
+    </div>
+  </section>
+
+  <!-- RIGHT: LIVE PREVIEW -->
+  <aside class="preview-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Live Preview</span>
+    </div>
+    <div class="preview-input-wrap">
+      <input type="text" id="preview-input" class="preview-input" placeholder="Type to preview…" value="Hello" autocomplete="off" />
+    </div>
+    <div class="preview-block">
+      <span class="preview-size-label">Normal (40px)</span>
+      <canvas id="preview-canvas-sm" class="preview-canvas"></canvas>
+    </div>
+    <div class="preview-block">
+      <span class="preview-size-label">Large (80px)</span>
+      <canvas id="preview-canvas-lg" class="preview-canvas"></canvas>
+    </div>
+    <div class="preview-stats">
+      <div class="stat">
+        <span class="stat-label">Total glyphs</span>
+        <span id="stat-total" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Current</span>
+        <span id="stat-current" class="stat-value">A</span>
+      </div>
+    </div>
+  </aside>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
